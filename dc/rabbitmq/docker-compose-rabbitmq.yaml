@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  rabbitmq:
+    image: docker.io/bitnami/rabbitmq:3.13
+    container_name: rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    environment:
+      - RABBITMQ_USERNAME=rmq1
+      - RABBITMQ_PASSWORD=rmq123
+      - RABBITMQ_VHOST=/
+      - RABBITMQ_LOGS=-
+    volumes:
+      - 'rabbitmq_data:/bitnami/rabbitmq/mnesia'
+volumes:
+  rabbitmq_data:
+    driver: local
