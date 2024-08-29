@@ -1,0 +1,20 @@
+version: "3"
+services:
+  cassandra:
+    image: docker.io/bitnami/cassandra:latest
+    container_name: cassandra
+    ports:
+      - '7000:7000'
+      - '9042:9042'
+    volumes:
+      - 'cassandra_data:/bitnami'
+    environment:
+      - CASSANDRA_SEEDS=cassandra
+      - CASSANDRA_PASSWORD_SEEDER=yes
+      - CASSANDRA_PASSWORD=cassandra
+      - CASSANDRA_AUTHENTICATOR=PasswordAuthenticator
+      - CASSANDRA_CFG_YAML_SASI_INDEXES_ENABLED=true
+
+volumes:
+  cassandra_data:
+    driver: local
