@@ -1,0 +1,14 @@
+services:
+  ollama:
+    container_name: ollama
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - HTTPS_PROXY=<corporate_proxy_url:port>
+
+volumes:
+  ollama_data:
+    driver: local
