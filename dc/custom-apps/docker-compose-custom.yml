@@ -1,0 +1,6 @@
+services:
+  datagenapp:
+    image:  ghcr.io/mgpradeepa/self-serv-pp:latest
+    container_name: datagenerator
+    ports:
+      - '8086:8080'
