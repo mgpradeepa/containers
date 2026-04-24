@@ -2,8 +2,10 @@ version: '3'
 
 services:
   rabbitmq:
-    image: docker.io/bitnami/rabbitmq:3.13
+    image: ddocker.io/rabbitmq:4.3-rc-management
     container_name: rabbitmq
+    hostname: rabbitmq-server
+    restart: always
     ports:
       - '5672:5672'
       - '15672:15672'
@@ -13,7 +15,9 @@ services:
       - RABBITMQ_VHOST=/
       - RABBITMQ_LOGS=-
     volumes:
-      - 'rabbitmq_data:/bitnami/rabbitmq/mnesia'
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_log:/var/log/rabbitmq
 volumes:
+  rabbitmq_log:
   rabbitmq_data:
     driver: local
