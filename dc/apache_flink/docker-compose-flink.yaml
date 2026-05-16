@@ -1,0 +1,129 @@
+services:
+  jobmanager:
+    build: .
+    hostname: jobmanager
+    container_name: jobmanager
+    ports:
+      - "9081:8081"
+    command: jobmanager
+    depends_on:
+      - nessie
+      - minio
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_DEFAULT_REGION: us-east-1
+      S3_ENDPOINT: http://minio:9000
+      S3_PATH_STYLE_ACCESS: "true"
+      S3_REGION: us-east-1
+      AWS_REGION: us-east-1
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        fs.s3a.endpoint: http://minio:9000
+        fs.s3a.path.style.access: true
+        fs.s3a.access.key: admin
+        fs.s3a.secret.key: password
+    networks:
+      mi:
+
+  taskmanager:
+    build: .
+    hostname: taskmanager
+    container_name: taskmanager
+    command: taskmanager
+    depends_on:
+      - jobmanager
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      S3_ENDPOINT: http://minio:9000
+      S3_PATH_STYLE_ACCESS: "true"
+      S3_REGION: us-east-1
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        fs.s3a.endpoint: http://minio:9000
+        fs.s3a.path.style.access: true
+        fs.s3a.access.key: admin
+        fs.s3a.secret.key: password
+    networks:
+      mi:
+ 
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+      - MINIO_DOMAIN=storage
+      - MINIO_REGION_NAME=us-east-1
+      - MINIO_REGION=us-east-1
+    ports:
+      - 9001:9001
+      - 9004:9000
+    volumes:
+      - minio_data:/data
+    command: [ "server", "/data", "--console-address", ":9001" ]
+    networks:
+      mi:
+
+  nessie:
+    image: projectnessie/nessie:latest
+    container_name: nessie
+    ports:
+      - "19120:19120"
+    environment:
+      NESSIE_VERSION_STORE_TYPE: CASSANDRA
+      QUARKUS_CASSANDRA_CONTACT-POINTS: cassandra:9042
+      QUARKUS_CASSANDRA_LOCAL-DATACENTER: datacenter1
+      QUARKUS_CASSANDRA_AUTH_USERNAME: cassandra
+      QUARKUS_CASSANDRA_AUTH_PASSWORD: cassandra
+      QUARKUS_CASSANDRA_HEALTH_ENABLED: "true"
+      NESSIE_VERSION_STORE_PERSIST_CASSANDRA_KEYSPACE: nessie
+      NESSIE_VERSION_STORE_PERSIST_CASSANDRA_CREATE_KEYSPACE: true
+    depends_on:
+      - cassandra
+    networks:
+      mi:
+
+  cassandra:
+    image: docker.io/cassandra:latest
+    container_name: cassandra
+    ports:
+      - '7000:7000'
+      - '9042:9042'
+    volumes:
+      - ./cassandra.yaml:/etc/cassandra/cassandra.yaml
+      - 'cassandra_data:/var/lib/cassandra'
+    environment:
+      - CASSANDRA_SEEDS=cassandra
+      - CASSANDRA_AUTHENTICATOR=PasswordAuthenticator
+      - CASSANDRA_AUTHORIZER=CassandraAuthorizer
+    networks:
+      mi:
+  
+    # Create the warehouse bucket
+  create-bucket:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      mi:
+    entrypoint: |
+      /bin/sh -c "
+      until (/usr/bin/mc alias set minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc rm -r --force minio/warehouse;
+      /usr/bin/mc mb minio/warehouse;
+      /usr/bin/mc policy set public minio/warehouse;
+      "
+networks:
+  mi:
+
+volumes:
+  cassandra_data:
+    driver: local
+  minio_data:
+    driver: local
